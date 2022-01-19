@@ -74,6 +74,18 @@ export default class BleModule {
     }
   }
 
+  async connectTest(device: Device,
+                    onError: (error: String) => void,
+                    onConnectSuccess: (device: Device) => void,){
+    try {
+      let promise = await this.manager.connectToDevice(device.id, { timeout: 3000 });
+      onConnectSuccess(promise)
+    } catch (error) {
+      onError(error.toString())
+
+    }
+  }
+
   connect(id) {
     console.log('isConnected:', id);
     this.isConnecting = true;
