@@ -35,7 +35,12 @@ export class BleScanComponent extends Component {
         checkBlePermission().then(permissionState => {
           switch (permissionState) {
             case 'granted':
-              this.scan();
+              if (!this.state.isScan) {
+                this.scan().then(r => {
+                  //TODO
+                });
+
+              }
               break;
             case 'denied':
             case 'never_ask_again':
@@ -109,7 +114,9 @@ export class BleScanComponent extends Component {
     console.log('test:' + bleDevice.rssi);
     bleModule.connectTest(bleDevice, error => {
       console.warn(error);
+      this.alert(error)
     }, (device) => {
+
       console.log('success')
       RootNavigation.navigate('BleDevice', {bleDevice: device})
     }).then(r => {
@@ -125,6 +132,7 @@ export class BleScanComponent extends Component {
 
     this.scanTimer && clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => {
+      this.setState({isScan: false});
       bleModule.stopScan();
     }, 3000);
 
