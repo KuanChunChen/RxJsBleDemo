@@ -1,18 +1,17 @@
 import React, {Component} from 'react';
 import {FlatList, TouchableOpacity, Text, Image, View} from 'react-native';
 
-import BleModule from '../../module/BleModule';
 import {checkBlePermission} from '../../util/PermissionUtil';
 import {styles} from './Styles';
 import Images from '../../../js/screens/scan/ItemImage';
 import * as RootNavigation from '../../../../../RootNavigation';
-import { Device } from 'react-native-ble-plx';
+import {Device} from 'react-native-ble-plx';
+import {bleModule} from '../../../../../App';
 
 export class BleScanComponent extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      isScan: false,
       isConnected: false,
       text: '',
       writeData: '',
@@ -35,12 +34,13 @@ export class BleScanComponent extends Component {
         checkBlePermission().then(permissionState => {
           switch (permissionState) {
             case 'granted':
-              if (!this.state.isScan) {
-                this.scan().then(r => {
-                  //TODO
-                });
+              console.log('start scanTimer :');
 
-              }
+              this.scanTimer && clearTimeout(this.scanTimer);
+              this.scanTimer = setTimeout(() => {
+                bleModule.stopScan();
+              }, 500);
+              this.scan();
               break;
             case 'denied':
             case 'never_ask_again':
@@ -58,6 +58,9 @@ export class BleScanComponent extends Component {
 
   componentWillUnmount() {
     bleModule.destroy();
+    bleModule.disconnect().then(r => {
+      //TODO
+    });
     this.onStateChangeListener && this.onStateChangeListener.remove();
   }
 
@@ -110,51 +113,38 @@ export class BleScanComponent extends Component {
   }
 
   onClickConnect(bleDevice: Device) {
-
     console.log('test:' + bleDevice.rssi);
-    bleModule.connectTest(bleDevice, error => {
-      console.warn(error);
-      this.alert(error)
-    }, (device) => {
-
-      console.log('success')
-      RootNavigation.navigate('BleDevice', {bleDevice: device})
-    }).then(r => {
-      //TODO
-    });
-
-  }
-
-  async scan() {
-    console.log('startDeviceScan scan:', 'scan');
-    this.setState({isScan: true});
-    this.deviceMap.clear();
-
-    this.scanTimer && clearTimeout(this.scanTimer);
-    this.scanTimer = setTimeout(() => {
-      this.setState({isScan: false});
-      bleModule.stopScan();
-    }, 3000);
-
-    await bleModule.startDeviceScan(
+    bleModule
+      .connectTest(
+        bleDevice,
         error => {
-          console.log('startDeviceScan error:', error);
-          if (error.errorCode === 102) {
-            this.alert(
-                'Please open bluetooth permission before use this application.',
-            );
-          }
-          this.setState({isScan: false});
+          console.warn(error);
         },
         device => {
-          console.log(device.id, device.name);
-          this.deviceMap.set(device.id, device);
-          this.setState({data: [...this.deviceMap.values()]});
+          console.log('success');
+          RootNavigation.navigate('BleDevice', {bleDevice: device});
         },
+      )
+      .then(r => {
+        //TODO
+      });
+  }
+
+  scan() {
+    console.log('startDeviceScan scan:', 'scan');
+    this.deviceMap.clear();
+    bleModule.startDeviceScan(
+      error => {
+        console.log('startDeviceScan error:', error);
+        if (error.errorCode === 102) {
+          console.log('error code 102');
+        }
+      },
+      device => {
+        console.log(device.id, device.name);
+        this.deviceMap.set(device.id, device);
+        this.setState({data: [...this.deviceMap.values()]});
+      },
     );
-
-
   }
 }
-
-const bleModule = new BleModule();

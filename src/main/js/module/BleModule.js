@@ -1,4 +1,10 @@
-import {BleError, BleManager, Device, ScanMode} from 'react-native-ble-plx';
+import {
+  BleError,
+  BleManager,
+  Characteristic,
+  Device,
+  ScanMode,
+} from 'react-native-ble-plx';
 
 export default class BleModule {
   constructor() {
@@ -43,8 +49,8 @@ export default class BleModule {
     this.writeWithResponseCharacteristicUUID = [];
     this.writeWithoutResponseServiceUUID = [];
     this.writeWithoutResponseCharacteristicUUID = [];
-    this.nofityServiceUUID = [];
-    this.nofityCharacteristicUUID = [];
+    this.notifyServiceUUID = [];
+    this.notifyCharacteristicUUID = [];
   }
 
   startDeviceScan(
@@ -52,17 +58,17 @@ export default class BleModule {
     onScanSuccess: (device: Device) => void,
   ) {
     this.manager.startDeviceScan(
-        null,
-        {scanMode: ScanMode.LowLatency},
-        (error, device) => {
-          if (error) {
-            console.log('startDeviceScan error:', error);
-            onError(error);
-          } else {
-            console.log(device.id, device.name);
-            onScanSuccess(device);
-          }
-        },
+      null,
+      {scanMode: ScanMode.LowLatency},
+      (error, device) => {
+        if (error) {
+          console.log('startDeviceScan error:', error);
+          onError(error);
+        } else {
+          console.log(device.id, device.name);
+          onScanSuccess(device);
+        }
+      },
     );
   }
 
@@ -73,83 +79,153 @@ export default class BleModule {
     }
   }
 
-  async connectTest(device: Device,
-                    onError: (error: String) => void,
-                    onConnectSuccess: (device: Device) => void,){
+  async connectTest(
+    device: Device,
+    onError: (error: String) => void = {},
+    onConnectSuccess: (device: Device) => void = {},
+  ) {
     try {
-      await this.manager.connectToDevice(device.id, {timeout: 3000})
-          .then(device => {
-            console.log('connect success:', device.name, device.id);
-            this.peripheralId = device.id;
-            onConnectSuccess(device)
-            return device.discoverAllServicesAndCharacteristics();
-          }).then(device => {
-            return this.fetchServicesAndCharacteristicsForDevice(device);
-          }).then(services => {
-            console.log('fetchServicesAndCharacteristicsForDevice', services);
-            this.isConnecting = false;
-            this.getUUID(services);
-          }).catch(err => {
-            this.isConnecting = false;
-            console.log('connect fail: ', err);
-            onError(error.toString())
-          });
-
-
-
+      await this.manager
+        .connectToDevice(device.id, {timeout: 3000})
+        .then(bleDevice => {
+          this.peripheralId = bleDevice.id;
+          return device.discoverAllServicesAndCharacteristics();
+        })
+        .then(connectDevice => {
+          return this.fetchServicesAndCharacteristicsForDevice(connectDevice);
+        })
+        .then(services => {
+          console.log('fetchServicesAndCharacteristicsForDevice', services);
+          this.isConnecting = false;
+          this.getUUID(services);
+          onConnectSuccess(device);
+        })
+        .catch(error => {
+          this.isConnecting = false;
+          console.log('connect fail: ', error);
+          onError(error.toString());
+        });
     } catch (error) {
-      onError(error.toString())
-
+      onError(error.toString());
     }
   }
 
-  getUUID(services){
+  getUUID(services) {
     this.readServiceUUID = [];
     this.readCharacteristicUUID = [];
     this.writeWithResponseServiceUUID = [];
     this.writeWithResponseCharacteristicUUID = [];
     this.writeWithoutResponseServiceUUID = [];
     this.writeWithoutResponseCharacteristicUUID = [];
-    this.nofityServiceUUID = [];
-    this.nofityCharacteristicUUID = [];
+    this.notifyServiceUUID = [];
+    this.notifyCharacteristicUUID = [];
 
-    for(let i in services){
+    for (let i in services) {
       // console.log('service',services[i]);
       let charchteristic = services[i].characteristics;
-      for(let j in charchteristic){
+      for (let j in charchteristic) {
         // console.log('charchteristic',charchteristic[j]);
-        if(charchteristic[j].isReadable){
+        if (charchteristic[j].isReadable) {
           this.readServiceUUID.push(services[i].uuid);
           this.readCharacteristicUUID.push(charchteristic[j].uuid);
         }
-        if(charchteristic[j].isWritableWithResponse){
+        if (charchteristic[j].isWritableWithResponse) {
           this.writeWithResponseServiceUUID.push(services[i].uuid);
           this.writeWithResponseCharacteristicUUID.push(charchteristic[j].uuid);
         }
-        if(charchteristic[j].isWritableWithoutResponse){
+        if (charchteristic[j].isWritableWithoutResponse) {
           this.writeWithoutResponseServiceUUID.push(services[i].uuid);
-          this.writeWithoutResponseCharacteristicUUID.push(charchteristic[j].uuid);
+          this.writeWithoutResponseCharacteristicUUID.push(
+            charchteristic[j].uuid,
+          );
         }
-        if(charchteristic[j].isNotifiable){
-          this.nofityServiceUUID.push(services[i].uuid);
-          this.nofityCharacteristicUUID.push(charchteristic[j].uuid);
+        if (charchteristic[j].isNotifiable) {
+          this.notifyServiceUUID.push(services[i].uuid);
+          this.notifyCharacteristicUUID.push(charchteristic[j].uuid);
         }
       }
     }
 
-    console.log('readServiceUUID',this.readServiceUUID);
-    console.log('readCharacteristicUUID',this.readCharacteristicUUID);
-    console.log('writeWithResponseServiceUUID',this.writeWithResponseServiceUUID);
-    console.log('writeWithResponseCharacteristicUUID',this.writeWithResponseCharacteristicUUID);
-    console.log('writeWithoutResponseServiceUUID',this.writeWithoutResponseServiceUUID);
-    console.log('writeWithoutResponseCharacteristicUUID',this.writeWithoutResponseCharacteristicUUID);
-    console.log('nofityServiceUUID',this.nofityServiceUUID);
-    console.log('nofityCharacteristicUUID',this.nofityCharacteristicUUID);
+    console.log('readServiceUUID', this.readServiceUUID);
+    console.log('readCharacteristicUUID', this.readCharacteristicUUID);
+    console.log(
+      'writeWithResponseServiceUUID',
+      this.writeWithResponseServiceUUID,
+    );
+    console.log(
+      'writeWithResponseCharacteristicUUID',
+      this.writeWithResponseCharacteristicUUID,
+    );
+    console.log(
+      'writeWithoutResponseServiceUUID',
+      this.writeWithoutResponseServiceUUID,
+    );
+    console.log(
+      'writeWithoutResponseCharacteristicUUID',
+      this.writeWithoutResponseCharacteristicUUID,
+    );
+    console.log('notifyServiceUUID', this.notifyServiceUUID);
+    console.log('notifyCharacteristicUUID', this.notifyCharacteristicUUID);
   }
 
+  startNotify(
+    listener: (error: ?Error, characteristic: ?Characteristic) => void,
+  ) {
+    console.log('----- start notify and device into -----');
+    console.log('peripheralId:' + this.peripheralId);
+    console.log('serviceUUID:' + this.writeWithResponseServiceUUID[0]);
+    console.log('charUUID:' + this.writeWithResponseCharacteristicUUID[0]);
+    console.log('NcharUUID:' + this.notifyServiceUUID[0]);
+    console.log('NcharUUID:' + this.notifyCharacteristicUUID[0]);
+    this.manager.monitorCharacteristicForDevice(
+      this.peripheralId,
+      this.notifyServiceUUID[0],
+      this.notifyCharacteristicUUID[0],
+      listener,
+    );
+  }
 
+  writeToDevice(value, index) {
+    let formatValue = value;
+    let transactionId = 'write';
+
+    /***
+     * 一般是使用 writeWithResponseServiceUUID
+     * 和 writeWithResponseCharacteristicUUID
+     *
+     * WM裡面用notifyServiceUUID
+     * 和 notifyCharacteristicUUID
+     */
+    console.log('----- start write and device into -----');
+    console.log('peripheralId:' + this.peripheralId);
+    console.log('serviceUUID:' + this.writeWithResponseServiceUUID[index]);
+    console.log('charUUID:' + this.writeWithResponseCharacteristicUUID[index]);
+    console.log('NcharUUID:' + this.notifyServiceUUID[index]);
+    console.log('NcharUUID:' + this.notifyCharacteristicUUID[index]);
+    console.log('payload :' + value);
+    return new Promise((resolve, reject) => {
+      this.manager
+        .writeCharacteristicWithResponseForDevice(
+          this.peripheralId,
+          this.notifyServiceUUID[index],
+          this.notifyCharacteristicUUID[index],
+          formatValue,
+        )
+        .then(
+          characteristic => {
+            console.log('write success', value);
+            resolve(characteristic);
+          },
+          error => {
+            console.log('write fail: ', error);
+            reject(error);
+          },
+        );
+    });
+  }
 
   destroy() {
+    console.log('destroy');
     this.manager.destroy();
   }
 

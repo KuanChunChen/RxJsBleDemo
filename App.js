@@ -13,10 +13,11 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {BleScanComponent} from './src/main/js/screens/scan/BleScanScreen';
 import {DeviceComponent} from './src/main/js/screens/device/DeviceScreen';
 import {navigationRef} from './RootNavigation';
-
+import BleModuleManager from './src/main/js/module/BleModuleManager';
 
 const Stack = createNativeStackNavigator();
-
+const {getBlueModule} = BleModuleManager.getInstance();
+export const bleModule = getBlueModule();
 function App() {
   return (
     <NavigationContainer ref={navigationRef}>
